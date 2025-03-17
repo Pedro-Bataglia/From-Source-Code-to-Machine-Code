@@ -38,9 +38,20 @@ def parse_exper(s: str, idx: int):
         return idx, parse_atom(s[start:idx])
     
 def skip_space(s, idx):
-    while idx < len(s) and s[idx].isspace():
-        idx += 1
-    return idx
+    while True:
+        save = idx
+        # try to skip space 
+        while idx < len(s) and s[idx].isspace():
+            idx += 1
+        # try to skip a line comment
+        if idx < len(s) and s[idx] == ';':
+            idx += 1
+            while idx < len(s) and s[idx] != '\n':
+                idx += 1
+        # no more spaces or coments
+        if idx == save:
+            break
+        return idx
 
 # bool, number, string or a symbol
 def parse_atom(s):
@@ -58,10 +69,14 @@ def pl_parse(s):
         raise ValueError('trailing garbage')
     return node
 
-def pl_eval(node):
+def pl_eval(env, node):
+    # read a variable 
+    if not isinstance(node, list):
+        assert isinstance(node, str)
+        return name_loopup(env, node)[node]
     if len(node) == 0:
         raise ValueError('empty list')
-    
+
     #bool, number, string and etc
     if len(node) == 2 and node[0] == 'val':
         return node[1]
@@ -116,3 +131,10 @@ def test_eval():
     assert f('1 (+ 1 3)') == 4
     assert f('(? (lt 1 3) "yes" "no")') == "yes"
     assert f('(print 123)') is None
+
+def name_loopup(env, key):
+    while env: # linked list traversal
+        current, env = env
+        if key in current:
+            return current
+    raise ValueError('Undefined name')
